@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,4 +21,10 @@ if (!isConfigured) {
 
 const app = isConfigured ? initializeApp(firebaseConfig) : null;
 export const auth = app ? getAuth(app) : null;
+
+// Read-only on the client: writes are refused by firestore.rules and go through
+// the Express API instead. This exists so the notification bell can listen for
+// changes in real time rather than polling.
+export const firestore = app ? getFirestore(app) : null;
+
 export default app;

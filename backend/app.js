@@ -8,6 +8,10 @@ const authRoutes = require("./routes/auth");
 const bookRoutes = require("./routes/books");
 const borrowRoutes = require("./routes/borrow");
 const statsRoutes = require("./routes/stats");
+const communityRoutes = require("./routes/community");
+const pointsRoutes = require("./routes/points");
+const reviewRoutes = require("./routes/reviews");
+const notificationRoutes = require("./routes/notifications");
 
 const app = express();
 
@@ -20,6 +24,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/books", bookRoutes);
 app.use("/api/borrowed", borrowRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/community", communityRoutes);
+app.use("/api/points", pointsRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/", (req, res) => {
   res.send("Bookverse API is running");

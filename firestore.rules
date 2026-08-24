@@ -1,0 +1,59 @@
+rules_version = '2';
+
+// Bookverse Firestore rules.
+//
+// Every write goes through the Express API using the Firebase Admin SDK, which
+// bypasses these rules. Clients therefore get READ access only — enough to run
+// real-time listeners (the notification bell, live community shelf) while
+// making it impossible for someone to award themselves contribution points or
+// approve their own borrow request straight from the browser console.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Points balances. Readable only by their owner; never client-writable.
+    match /users/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // The community shelf is public to browse.
+    match /usedBooks/{bookId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // A borrow request carries a home address, so only the two people involved
+    // may read it.
+    match /borrowRequests/{requestId} {
+      allow read: if signedIn() &&
+        (request.auth.uid == resource.data.ownerUid ||
+         request.auth.uid == resource.data.requesterUid);
+      allow write: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn() && request.auth.uid == resource.data.userUid;
+      allow write: if false;
+    }
+
+    // Reviews are public to read, like the books they describe.
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Purchases include a delivery address — owner only.
+    match /purchases/{purchaseId} {
+      allow read: if signedIn() && request.auth.uid == resource.data.userUid;
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

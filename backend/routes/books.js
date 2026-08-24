@@ -89,6 +89,15 @@ router.post("/:id/borrow", verifyFirebaseToken, async (req, res) => {
       return res.status(400).json({ message: "This book is currently unavailable" });
     }
 
+    const name = (req.body.shippingName || "").trim();
+    const idNumber = (req.body.shippingIdNumber || "").trim();
+    const address = (req.body.shippingAddress || "").trim();
+    if (!name || !idNumber || !address) {
+      return res
+        .status(400)
+        .json({ message: "Name, ID and home address are required to borrow" });
+    }
+
     const alreadyBorrowed = await Borrow.findOne({
       userId: req.user._id,
       bookId: book._id,
@@ -98,7 +107,11 @@ router.post("/:id/borrow", verifyFirebaseToken, async (req, res) => {
       return res.status(400).json({ message: "You have already borrowed this book" });
     }
 
-    const borrow = await Borrow.create({ userId: req.user._id, bookId: book._id });
+    const borrow = await Borrow.create({
+      userId: req.user._id,
+      bookId: book._id,
+      shipping: { name, idNumber, address },
+    });
     book.available = false;
     await book.save();
 

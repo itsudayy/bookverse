@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FiArrowLeft, FiBookOpen, FiCalendar, FiFileText, FiCheckCircle, FiLock } from "react-icons/fi";
+import { FiArrowLeft, FiBookOpen, FiCalendar, FiFileText, FiCheckCircle, FiLock, FiAward } from "react-icons/fi";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { fetchMyPoints, purchaseBook } from "../services/pointsService";
 import PageTransition from "../components/PageTransition";
 import BookCover from "../components/BookCover";
 import RatingStars from "../components/RatingStars";
+import ShippingModal from "../components/ShippingModal";
+import ReviewSection from "../components/ReviewSection";
 
 const BookDetails = () => {
   const { id } = useParams();
@@ -15,8 +18,13 @@ const BookDetails = () => {
 
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [borrowing, setBorrowing] = useState(false);
   const [message, setMessage] = useState(null);
+
+  // One modal serves both actions; `intent` decides which request it fires.
+  const [intent, setIntent] = useState(null); // "borrow" | "purchase"
+  const [submitting, setSubmitting] = useState(false);
+  const [modalError, setModalError] = useState("");
+  const [points, setPoints] = useState(null);
 
   const fetchBook = async () => {
     try {
@@ -29,30 +37,57 @@ const BookDetails = () => {
     }
   };
 
+  const loadPoints = async () => {
+    if (!firebaseUser) return;
+    try {
+      setPoints(await fetchMyPoints());
+    } catch (err) {
+      console.error("Failed to load points", err);
+    }
+  };
+
   useEffect(() => {
     fetchBook();
     window.scrollTo(0, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const handleBorrow = async () => {
+  useEffect(() => {
+    loadPoints();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firebaseUser]);
+
+  const openIntent = (which) => {
     if (!firebaseUser) {
       navigate("/login", { state: { from: `/books/${id}` } });
       return;
     }
-    setBorrowing(true);
+    setModalError("");
     setMessage(null);
+    setIntent(which);
+  };
+
+  const handleConfirm = async (shipping) => {
+    setSubmitting(true);
+    setModalError("");
     try {
-      await api.post(`/books/${id}/borrow`);
-      setMessage({ type: "success", text: "Book borrowed! Check My Library." });
+      if (intent === "purchase") {
+        const res = await purchaseBook(id, shipping);
+        setMessage({
+          type: "success",
+          text: `Purchased! ${res.pointsSpent} points spent — this book is yours permanently.`,
+        });
+      } else {
+        await api.post(`/books/${id}/borrow`, shipping);
+        setMessage({ type: "success", text: "Book borrowed! Check My Library." });
+      }
+      setIntent(null);
       fetchBook();
+      loadPoints();
     } catch (err) {
-      setMessage({
-        type: "error",
-        text: err.response?.data?.message || "Could not borrow this book.",
-      });
+      setModalError(err.response?.data?.message || "Something went wrong.");
     } finally {
-      setBorrowing(false);
+      setSubmitting(false);
     }
   };
 
@@ -159,14 +194,13 @@ const BookDetails = () => {
               </motion.p>
             )}
 
-            <div className="mt-8">
+            <div className="mt-8 flex flex-wrap items-center gap-3">
               {book.available ? (
                 <button
-                  onClick={handleBorrow}
-                  disabled={borrowing}
-                  className="rounded-full bg-gradient-to-r from-coral-500 to-coral-400 px-8 py-4 text-sm font-bold text-white shadow-coral transition-all duration-300 hover:-translate-y-1 hover:shadow-lg disabled:opacity-60 disabled:hover:translate-y-0"
+                  onClick={() => openIntent("borrow")}
+                  className="rounded-full bg-gradient-to-r from-coral-500 to-coral-400 px-8 py-4 text-sm font-bold text-white shadow-coral transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
                 >
-                  {borrowing ? "Borrowing..." : "Borrow Book"}
+                  Borrow Book
                 </button>
               ) : (
                 <button
@@ -176,19 +210,57 @@ const BookDetails = () => {
                   Currently Borrowed
                 </button>
               )}
-              {!firebaseUser && (
-                <p className="mt-3 text-xs text-navy-400">
-                  You'll need to{" "}
-                  <Link to="/login" className="font-semibold text-indigo-600 hover:underline">
-                    log in
-                  </Link>{" "}
-                  to borrow this book.
-                </p>
-              )}
+
+              {/* Buying is independent of availability — a purchased copy is
+                  posted to the reader rather than lent from the shelf. */}
+              <button
+                onClick={() => openIntent("purchase")}
+                className="flex items-center gap-2 rounded-full border-2 border-indigo-600 px-8 py-4 text-sm font-bold text-indigo-600 transition-all duration-300 hover:-translate-y-1 hover:bg-indigo-600 hover:text-white"
+              >
+                <FiAward />
+                Buy with {points?.pointsToPurchase ?? 200} points
+              </button>
             </div>
+
+            {firebaseUser ? (
+              <p className="mt-3 text-xs text-navy-400">
+                You have{" "}
+                <span className="font-bold text-indigo-600">{points?.points ?? 0} points</span>.
+                Earn more by sharing your own books on the{" "}
+                <Link to="/community" className="font-semibold text-indigo-600 hover:underline">
+                  Community Shelf
+                </Link>
+                .
+              </p>
+            ) : (
+              <p className="mt-3 text-xs text-navy-400">
+                You'll need to{" "}
+                <Link to="/login" className="font-semibold text-indigo-600 hover:underline">
+                  log in
+                </Link>{" "}
+                to borrow or buy this book.
+              </p>
+            )}
           </motion.div>
         </div>
+
+        <ReviewSection source="official" bookId={id} />
       </section>
+
+      <ShippingModal
+        open={Boolean(intent)}
+        title={intent === "purchase" ? "Purchase this book" : "Borrow this book"}
+        subtitle={
+          intent === "purchase"
+            ? `"${book.title}" costs ${points?.pointsToPurchase ?? 200} points. Where should we send it?`
+            : `Where should the library parcel "${book.title}"?`
+        }
+        confirmLabel={intent === "purchase" ? "Confirm purchase" : "Confirm borrow"}
+        submitting={submitting}
+        error={modalError}
+        onClose={() => setIntent(null)}
+        onSubmit={handleConfirm}
+      />
     </PageTransition>
   );
 };

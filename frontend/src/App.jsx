@@ -7,6 +7,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import Collection from "./pages/Collection";
 import BookDetails from "./pages/BookDetails";
+import Community from "./pages/Community";
+import CommunityBookDetails from "./pages/CommunityBookDetails";
 import Genres from "./pages/Genres";
 import About from "./pages/About";
 import Login from "./pages/Login";
@@ -28,6 +30,8 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/collection" element={<Collection />} />
             <Route path="/books/:id" element={<BookDetails />} />
+            <Route path="/community" element={<Community />} />
+            <Route path="/community/:id" element={<CommunityBookDetails />} />
             <Route path="/genres" element={<Genres />} />
             <Route path="/about" element={<About />} />
             <Route path="/login" element={<Login />} />

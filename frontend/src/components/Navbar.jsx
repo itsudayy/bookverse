@@ -3,10 +3,12 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiSearch, FiMenu, FiX, FiUser, FiLogOut, FiBookOpen } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
+import NotificationBell from "./NotificationBell";
 
 const links = [
   { to: "/", label: "Home" },
   { to: "/collection", label: "Collection" },
+  { to: "/community", label: "Community" },
   { to: "/genres", label: "Genres" },
   { to: "/about", label: "About" },
 ];
@@ -136,6 +138,8 @@ const Navbar = () => {
               <FiSearch size={18} />
             </button>
           </div>
+
+          <NotificationBell />
 
           {firebaseUser ? (
             <div className="relative hidden lg:block">

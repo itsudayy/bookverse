@@ -1,20 +1,21 @@
 const express = require("express");
 const Book = require("../models/Book");
+const { db, COLLECTIONS } = require("../lib/firestore");
 
 const router = express.Router();
 
 // GET /api/stats
 router.get("/", async (req, res) => {
   try {
-    // Purchased copies have left the library, so they're counted separately
-    // rather than inflating the collection totals.
-    const inCollection = { purchased: { $ne: true } };
-
-    const totalBooks = await Book.countDocuments(inCollection);
-    const availableBooks = await Book.countDocuments({ ...inCollection, available: true });
+    const totalBooks = await Book.countDocuments();
+    const availableBooks = await Book.countDocuments({ available: true });
     const borrowedBooks = totalBooks - availableBooks;
-    const purchasedBooks = await Book.countDocuments({ purchased: true });
-    const categories = (await Book.distinct("category", inCollection)).length;
+    const categories = (await Book.distinct("category")).length;
+
+    // Sold copies are deleted from the collection, so the only remaining record
+    // of them is the purchases ledger.
+    const purchasedSnap = await db.collection(COLLECTIONS.purchases).count().get();
+    const purchasedBooks = purchasedSnap.data().count;
 
     res.json({ totalBooks, availableBooks, borrowedBooks, purchasedBooks, categories });
   } catch (err) {

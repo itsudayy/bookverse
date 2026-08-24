@@ -10,12 +10,54 @@ const {
 
 const { FieldValue } = admin.firestore;
 
-// Undoes the claim made before spending points, so a failed payment doesn't
-// strand a book as sold-but-never-paid-for.
+// Puts the copy back on the shelf when a sale doesn't complete, so a failed
+// payment doesn't leave a book stuck as permanently unavailable.
 async function releaseClaim(bookId) {
-  await Book.findByIdAndUpdate(bookId, {
-    $set: { purchased: false, available: true, purchasedBy: null, purchasedAt: null },
-  });
+  await Book.findByIdAndUpdate(bookId, { $set: { available: true } });
+}
+
+// The Book document is about to be deleted, so anything that still refers to it
+// keeps its own copy of the details first. Without this a reader's history and
+// their reviews would lose the title they were about.
+async function preserveReferences(book) {
+  const snapshot = {
+    title: book.title,
+    author: book.author,
+    coverImage: book.coverImage,
+  };
+
+  await Borrow.updateMany(
+    { bookId: book._id, "bookSnapshot.title": { $exists: false } },
+    { $set: { bookSnapshot: snapshot } }
+  );
+
+  const bookId = String(book._id);
+
+  const reviews = await db
+    .collection(COLLECTIONS.reviews)
+    .where("source", "==", "official")
+    .where("bookId", "==", bookId)
+    .get();
+  const reviewBatch = db.batch();
+  reviews.docs.forEach((d) =>
+    reviewBatch.update(d.ref, {
+      bookTitle: snapshot.title,
+      bookAuthor: snapshot.author,
+      bookCover: snapshot.coverImage,
+    })
+  );
+  await reviewBatch.commit();
+
+  // The book can never be borrowed or bought again, so leaving it on anyone's
+  // wishlist would only produce a dead link.
+  const wishes = await db
+    .collection(COLLECTIONS.wishlist)
+    .where("source", "==", "official")
+    .where("bookId", "==", bookId)
+    .get();
+  const wishBatch = db.batch();
+  wishes.docs.forEach((d) => wishBatch.delete(d.ref));
+  await wishBatch.commit();
 }
 
 // GET /api/points/me — balance plus the economy's rates, so the UI never has
@@ -63,16 +105,13 @@ async function purchaseOfficialBook(req, res, next) {
     }
 
     const book = await Book.findById(req.params.bookId);
-    if (!book) return res.status(404).json({ message: "Book not found" });
-
-    if (book.purchased) {
-      return res.status(400).json({
-        message:
-          book.purchasedBy === req.user.firebaseUid
-            ? "You already own this book."
-            : "This copy has already been purchased by another reader.",
+    if (!book) {
+      // Already bought by someone else — the document is gone for good.
+      return res.status(404).json({
+        message: "This book is no longer in the collection — it may have just been purchased.",
       });
     }
+
     // The library lends one copy; it can't be posted to a buyer while someone
     // else is reading it.
     if (!book.available) {
@@ -89,21 +128,12 @@ async function purchaseOfficialBook(req, res, next) {
     }
 
     // MongoDB holds the book and Firestore holds the points, so there is no
-    // single transaction spanning both. Claim the copy first with one atomic
+    // single transaction spanning both. Reserve the copy first with one atomic
     // conditional update — whoever wins this update owns the sale — then spend
-    // the points, and release the claim if that fails.
+    // the points, and put it back if that fails.
     const claimed = await Book.findOneAndUpdate(
-      // $ne: true rather than false — books seeded before this field existed
-      // have no `purchased` key at all, and an equality match skips those.
-      { _id: book._id, available: true, purchased: { $ne: true } },
-      {
-        $set: {
-          purchased: true,
-          available: false,
-          purchasedBy: req.user.firebaseUid,
-          purchasedAt: new Date(),
-        },
-      },
+      { _id: book._id, available: true },
+      { $set: { available: false } },
       { new: true }
     );
     if (!claimed) {
@@ -155,6 +185,11 @@ async function purchaseOfficialBook(req, res, next) {
         message: `Not enough points. This book costs ${POINTS_TO_PURCHASE}, you have ${result.balance}.`,
       });
     }
+
+    // Paid for — the copy leaves the library for good. Snapshot it onto the
+    // records that outlive it before removing the document.
+    await preserveReferences(book);
+    await Book.findByIdAndDelete(book._id);
 
     res.status(201).json({
       message: "Book purchased",

@@ -62,6 +62,17 @@ async function addReview(req, res, next) {
       return res.status(400).json({ message: "You have already reviewed this book" });
     }
 
+    // Snapshot the book alongside the review. An official book is deleted when
+    // someone buys it with points, and the reader's own review should still say
+    // what it was about afterwards.
+    let snapshot = {};
+    if (source === "official") {
+      const b = await Book.findById(bookId).select("title author coverImage");
+      if (b) {
+        snapshot = { bookTitle: b.title, bookAuthor: b.author, bookCover: b.coverImage };
+      }
+    }
+
     const review = {
       source,
       bookId,
@@ -69,6 +80,7 @@ async function addReview(req, res, next) {
       userName: req.user.name,
       rating,
       text,
+      ...snapshot,
       createdAt: FieldValue.serverTimestamp(),
     };
     const ref = await db.collection(COLLECTIONS.reviews).add(review);
@@ -113,11 +125,13 @@ async function listMyReviews(req, res, next) {
 
     const enriched = reviews.map((r) => {
       const book = r.source === "official" ? officialMap[r.bookId] : communityMap[r.bookId];
+      // Live book first so edits show through, then the snapshot taken when the
+      // review was written — which is all that's left once a book is sold.
       return {
         ...r,
-        bookTitle: book?.title || "Unknown book",
-        bookAuthor: book?.author || "",
-        bookCover: book?.coverImage || "",
+        bookTitle: book?.title || r.bookTitle || "Unknown book",
+        bookAuthor: book?.author || r.bookAuthor || "",
+        bookCover: book?.coverImage || r.bookCover || "",
         bookExists: Boolean(book),
       };
     });

@@ -14,6 +14,15 @@ const borrowSchema = new mongoose.Schema({
     phone: String,
     address: String,
   },
+
+  // A copy of the book as it was when borrowed. If the title is later bought
+  // with points the Book document is deleted, and without this the reader's
+  // history would populate to null and render as "Untitled".
+  bookSnapshot: {
+    title: String,
+    author: String,
+    coverImage: String,
+  },
 });
 
 module.exports = mongoose.model("Borrow", borrowSchema);

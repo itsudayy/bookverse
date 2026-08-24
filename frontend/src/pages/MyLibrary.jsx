@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiBookOpen,
@@ -36,7 +36,9 @@ const TABS = [
 
 const MyLibrary = () => {
   const { profile, refreshPoints } = useAuth();
-  const [tab, setTab] = useState("borrowed");
+  const location = useLocation();
+  // Arriving straight from a purchase: open on the tab holding the new book.
+  const [tab, setTab] = useState(location.state?.purchased ? "purchased" : "borrowed");
 
   const [records, setRecords] = useState([]);
   const [myBooks, setMyBooks] = useState([]);
@@ -49,7 +51,7 @@ const MyLibrary = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState("");
-  const [toast, setToast] = useState(null);
+  const [toast, setToast] = useState(location.state?.purchased || null);
 
   const loadAll = async () => {
     try {
@@ -307,6 +309,11 @@ const MyLibrary = () => {
                                 <p className="mt-2 text-[11px] font-semibold text-navy-300">
                                   Returned {new Date(r.returnedAt).toLocaleDateString()}
                                 </p>
+                                {r.bookGone && (
+                                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-navy-300">
+                                    No longer in the library
+                                  </p>
+                                )}
                               </div>
                             </div>
                           ))}

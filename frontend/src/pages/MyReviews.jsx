@@ -76,24 +76,45 @@ const MyReviews = () => {
                   transition={{ duration: 0.35, delay: i * 0.05 }}
                   className="flex gap-4 rounded-2xl border border-navy-100 bg-white p-4 shadow-sm sm:p-5"
                 >
-                  <Link to={linkFor(r)} className="shrink-0">
+                  {/* A book bought with points is deleted, so its page is gone;
+                      the review still stands on its snapshot, just unlinked. */}
+                  {r.bookExists ? (
+                    <Link to={linkFor(r)} className="shrink-0">
+                      <BookCover
+                        src={r.bookCover}
+                        alt={r.bookTitle}
+                        className="h-28 w-20 rounded-lg object-cover"
+                      />
+                    </Link>
+                  ) : (
                     <BookCover
                       src={r.bookCover}
                       alt={r.bookTitle}
-                      className="h-28 w-20 rounded-lg object-cover"
+                      className="h-28 w-20 shrink-0 rounded-lg object-cover grayscale-[30%]"
                     />
-                  </Link>
+                  )}
                   <div className="flex flex-1 flex-col">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
-                        <Link
-                          to={linkFor(r)}
-                          className="font-display text-lg leading-snug text-navy-900 hover:text-coral-600"
-                        >
-                          {r.bookTitle}
-                        </Link>
+                        {r.bookExists ? (
+                          <Link
+                            to={linkFor(r)}
+                            className="font-display text-lg leading-snug text-navy-900 hover:text-coral-600"
+                          >
+                            {r.bookTitle}
+                          </Link>
+                        ) : (
+                          <p className="font-display text-lg leading-snug text-navy-900">
+                            {r.bookTitle}
+                          </p>
+                        )}
                         {r.bookAuthor && (
                           <p className="mt-0.5 text-xs text-navy-400">{r.bookAuthor}</p>
+                        )}
+                        {!r.bookExists && (
+                          <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-navy-300">
+                            No longer in the library
+                          </p>
                         )}
                       </div>
                       <span

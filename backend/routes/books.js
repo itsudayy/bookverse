@@ -1,7 +1,7 @@
 const express = require("express");
 const Book = require("../models/Book");
 const Borrow = require("../models/Borrow");
-const auth = require("../middleware/auth");
+const { verifyFirebaseToken } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -81,7 +81,7 @@ router.delete("/:id", async (req, res) => {
 });
 
 // POST /api/books/:id/borrow
-router.post("/:id/borrow", auth, async (req, res) => {
+router.post("/:id/borrow", verifyFirebaseToken, async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
     if (!book) return res.status(404).json({ message: "Book not found" });
@@ -90,7 +90,7 @@ router.post("/:id/borrow", auth, async (req, res) => {
     }
 
     const alreadyBorrowed = await Borrow.findOne({
-      userId: req.userId,
+      userId: req.user._id,
       bookId: book._id,
       status: "borrowed",
     });
@@ -98,7 +98,7 @@ router.post("/:id/borrow", auth, async (req, res) => {
       return res.status(400).json({ message: "You have already borrowed this book" });
     }
 
-    const borrow = await Borrow.create({ userId: req.userId, bookId: book._id });
+    const borrow = await Borrow.create({ userId: req.user._id, bookId: book._id });
     book.available = false;
     await book.save();
 
@@ -109,11 +109,11 @@ router.post("/:id/borrow", auth, async (req, res) => {
 });
 
 // POST /api/books/:id/return
-router.post("/:id/return", auth, async (req, res) => {
+router.post("/:id/return", verifyFirebaseToken, async (req, res) => {
   try {
     const borrow = await Borrow.findOne({
       bookId: req.params.id,
-      userId: req.userId,
+      userId: req.user._id,
       status: "borrowed",
     });
     if (!borrow) {

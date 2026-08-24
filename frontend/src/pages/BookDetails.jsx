@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FiArrowLeft, FiBookOpen, FiCalendar, FiFileText, FiCheckCircle, FiLock } from "react-icons/fi";
-import api from "../api/axios";
+import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import PageTransition from "../components/PageTransition";
 import BookCover from "../components/BookCover";
@@ -11,7 +11,7 @@ import RatingStars from "../components/RatingStars";
 const BookDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, token } = useAuth();
+  const { firebaseUser } = useAuth();
 
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,7 @@ const BookDetails = () => {
   }, [id]);
 
   const handleBorrow = async () => {
-    if (!token) {
+    if (!firebaseUser) {
       navigate("/login", { state: { from: `/books/${id}` } });
       return;
     }
@@ -176,7 +176,7 @@ const BookDetails = () => {
                   Currently Borrowed
                 </button>
               )}
-              {!user && (
+              {!firebaseUser && (
                 <p className="mt-3 text-xs text-navy-400">
                   You'll need to{" "}
                   <Link to="/login" className="font-semibold text-indigo-600 hover:underline">

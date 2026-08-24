@@ -17,7 +17,7 @@ const Navbar = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { profile, firebaseUser, logout } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,8 +35,8 @@ const Navbar = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setUserMenuOpen(false);
     navigate("/");
   };
@@ -82,7 +82,7 @@ const Navbar = () => {
               )}
             </NavLink>
           ))}
-          {user && (
+          {firebaseUser && (
             <NavLink
               key="/my-library"
               to="/my-library"
@@ -137,16 +137,16 @@ const Navbar = () => {
             </button>
           </div>
 
-          {user ? (
+          {firebaseUser ? (
             <div className="relative hidden lg:block">
               <button
                 onClick={() => setUserMenuOpen((s) => !s)}
                 className="flex items-center gap-2 rounded-full bg-cream-50/10 pl-1.5 pr-3 py-1.5 text-sm font-semibold text-cream-50 hover:bg-cream-50/20 transition-colors duration-300"
               >
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-coral-500 text-xs uppercase">
-                  {user.name?.[0]}
+                  {profile?.name?.[0] || "?"}
                 </span>
-                {user.name?.split(" ")[0]}
+                {profile?.name?.split(" ")[0] || "Account"}
               </button>
               <AnimatePresence>
                 {userMenuOpen && (
@@ -211,7 +211,7 @@ const Navbar = () => {
             className="lg:hidden overflow-hidden bg-navy-900/98 backdrop-blur-lg"
           >
             <div className="container-app flex flex-col gap-1 py-4">
-              {[...links, ...(user ? [{ to: "/my-library", label: "My Library" }] : [])].map(
+              {[...links, ...(firebaseUser ? [{ to: "/my-library", label: "My Library" }] : [])].map(
                 (link) => (
                   <NavLink
                     key={link.to}
@@ -236,7 +236,7 @@ const Navbar = () => {
                 />
               </form>
               <div className="mt-2 flex gap-2 px-4">
-                {user ? (
+                {firebaseUser ? (
                   <button
                     onClick={() => {
                       handleLogout();

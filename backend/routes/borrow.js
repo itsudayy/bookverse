@@ -1,13 +1,13 @@
 const express = require("express");
 const Borrow = require("../models/Borrow");
-const auth = require("../middleware/auth");
+const { verifyFirebaseToken } = require("../middleware/auth");
 
 const router = express.Router();
 
 // GET /api/borrowed/me
-router.get("/me", auth, async (req, res) => {
+router.get("/me", verifyFirebaseToken, async (req, res) => {
   try {
-    const records = await Borrow.find({ userId: req.userId })
+    const records = await Borrow.find({ userId: req.user._id })
       .populate("bookId")
       .sort({ borrowedAt: -1 });
     res.json(records);

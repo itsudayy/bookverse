@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FiArrowRight, FiBookOpen, FiUsers, FiClock, FiGrid } from "react-icons/fi";
-import api from "../api/axios";
+import api from "../services/api";
 import PageTransition from "../components/PageTransition";
 import BookCard from "../components/BookCard";
 import GenreCard from "../components/GenreCard";

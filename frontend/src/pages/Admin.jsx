@@ -10,7 +10,7 @@ import {
   FiTrash2,
   FiX,
 } from "react-icons/fi";
-import api from "../api/axios";
+import api from "../services/api";
 import PageTransition from "../components/PageTransition";
 import BookCover from "../components/BookCover";
 

@@ -2,7 +2,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const ProtectedRoute = ({ children }) => {
-  const { user, token, loading } = useAuth();
+  const { firebaseUser, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -13,7 +13,7 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  if (!token || !user) {
+  if (!firebaseUser) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 

@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiBookOpen, FiClock, FiCheckCircle } from "react-icons/fi";
-import api from "../api/axios";
+import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import PageTransition from "../components/PageTransition";
 import BookCover from "../components/BookCover";
 
 const MyLibrary = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [returningId, setReturningId] = useState(null);
@@ -48,7 +48,7 @@ const MyLibrary = () => {
       <section className="bg-navy-950 py-16">
         <div className="container-app">
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-coral-400">
-            Hello, {user?.name?.split(" ")[0]}
+            Hello, {profile?.name?.split(" ")[0]}
           </p>
           <h1 className="font-display text-4xl text-cream-50 sm:text-5xl">My Library</h1>
           <p className="mt-3 max-w-xl text-cream-100/60">

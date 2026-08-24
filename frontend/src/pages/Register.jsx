@@ -1,21 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
+import { friendlyAuthError } from "../utils/authError";
 import AuthLayout from "../components/AuthLayout";
+import GoogleIcon from "../components/GoogleIcon";
 
 const Register = () => {
-  const { register } = useAuth();
+  const { signup, loginWithGoogle, firebaseUser, loading: authLoading, redirectError } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Google sign-in via redirect reloads the page, so route on the restored
+  // session rather than on handleGoogle's return value.
+  useEffect(() => {
+    if (!authLoading && firebaseUser) navigate("/", { replace: true });
+  }, [authLoading, firebaseUser, navigate]);
+
+  useEffect(() => {
+    if (redirectError) setError(friendlyAuthError(redirectError));
+  }, [redirectError]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
 
@@ -24,20 +36,35 @@ const Register = () => {
       return;
     }
     if (form.password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError("Password should be at least 6 characters.");
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
-      await register(form.name, form.email, form.password);
+      await signup(form.name, form.email, form.password);
       navigate("/", { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      setError(friendlyAuthError(err));
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
-  };
+  }
+
+  async function handleGoogle() {
+    setError("");
+    setSubmitting(true);
+    try {
+      // null means we fell back to a redirect — the browser is navigating away,
+      // so there's nothing to route to here.
+      const user = await loginWithGoogle();
+      if (user) navigate("/", { replace: true });
+    } catch (err) {
+      setError(friendlyAuthError(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <AuthLayout
@@ -52,6 +79,22 @@ const Register = () => {
         </>
       }
     >
+      <button
+        type="button"
+        onClick={handleGoogle}
+        disabled={submitting}
+        className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-navy-100 bg-white py-3.5 text-sm font-bold text-navy-700 transition-all duration-300 hover:border-navy-200 hover:bg-cream-50 hover:-translate-y-0.5 disabled:opacity-60"
+      >
+        <GoogleIcon />
+        Continue with Google
+      </button>
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-navy-100" />
+        <span className="text-xs uppercase tracking-widest text-navy-300">or</span>
+        <div className="h-px flex-1 bg-navy-100" />
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <p className="rounded-lg bg-coral-50 px-4 py-3 text-sm font-semibold text-coral-700">
@@ -119,10 +162,10 @@ const Register = () => {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={submitting}
           className="w-full rounded-xl bg-gradient-to-r from-coral-500 to-coral-400 py-3.5 text-sm font-bold text-white shadow-coral transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60"
         >
-          {loading ? "Creating account..." : "Register"}
+          {submitting ? "Creating account..." : "Register"}
         </button>
       </form>
     </AuthLayout>

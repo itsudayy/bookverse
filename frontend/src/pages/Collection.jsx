@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FiSearch, FiX } from "react-icons/fi";
-import api from "../api/axios";
+import api from "../services/api";
 import PageTransition from "../components/PageTransition";
 import BookCard from "../components/BookCard";
 

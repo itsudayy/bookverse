@@ -11,7 +11,7 @@ const borrowSchema = new mongoose.Schema({
   // loan it was given for instead of lingering on the account.
   shipping: {
     name: String,
-    idNumber: String,
+    phone: String,
     address: String,
   },
 });

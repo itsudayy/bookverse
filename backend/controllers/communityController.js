@@ -10,10 +10,10 @@ const { FieldValue } = admin.firestore;
 // Shipping details the library needs to parcel a book to someone's home.
 function readShipping(body) {
   const name = (body.shippingName || "").trim();
-  const idNumber = (body.shippingIdNumber || "").trim();
+  const phone = (body.shippingPhone || "").trim();
   const address = (body.shippingAddress || "").trim();
-  if (!name || !idNumber || !address) return null;
-  return { name, idNumber, address };
+  if (!name || !phone || !address) return null;
+  return { name, phone, address };
 }
 
 async function notify(userUid, payload) {
@@ -154,7 +154,7 @@ async function requestBorrow(req, res, next) {
     if (!shipping) {
       return res
         .status(400)
-        .json({ message: "Name, ID and home address are required to borrow" });
+        .json({ message: "Name, phone number and home address are required to borrow" });
     }
 
     const bookRef = db.collection(COLLECTIONS.usedBooks).doc(req.params.id);

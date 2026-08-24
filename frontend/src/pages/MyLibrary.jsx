@@ -393,8 +393,8 @@ const MyLibrary = () => {
                           </p>
                           {r.status === "approved" && (
                             <p className="mt-1.5 text-[11px] leading-relaxed text-navy-500">
-                              Deliver to: {r.shipping?.name}, {r.shipping?.address} (ID:{" "}
-                              {r.shipping?.idNumber})
+                              Deliver to: {r.shipping?.name}, {r.shipping?.address} (Phone:{" "}
+                              {r.shipping?.phone})
                             </p>
                           )}
                         </div>

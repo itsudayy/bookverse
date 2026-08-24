@@ -45,12 +45,12 @@ async function listMyPurchases(req, res, next) {
 async function purchaseOfficialBook(req, res, next) {
   try {
     const name = (req.body.shippingName || "").trim();
-    const idNumber = (req.body.shippingIdNumber || "").trim();
+    const phone = (req.body.shippingPhone || "").trim();
     const address = (req.body.shippingAddress || "").trim();
-    if (!name || !idNumber || !address) {
+    if (!name || !phone || !address) {
       return res
         .status(400)
-        .json({ message: "Name, ID and home address are required to purchase" });
+        .json({ message: "Name, phone number and home address are required to purchase" });
     }
 
     const book = await Book.findById(req.params.bookId);
@@ -88,7 +88,7 @@ async function purchaseOfficialBook(req, res, next) {
         bookAuthor: book.author,
         bookCover: book.coverImage,
         pointsSpent: POINTS_TO_PURCHASE,
-        shipping: { name, idNumber, address },
+        shipping: { name, phone, address },
         createdAt: FieldValue.serverTimestamp(),
       });
       return { ok: true, balance: balance - POINTS_TO_PURCHASE };

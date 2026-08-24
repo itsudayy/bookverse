@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiX, FiUser, FiCreditCard, FiMapPin } from "react-icons/fi";
+import { FiX, FiUser, FiPhone, FiMapPin } from "react-icons/fi";
 
 // The library parcels books to people's homes, so borrowing and purchasing both
 // need the same delivery details. One component serves both so the two flows
 // can never drift apart.
 const ShippingModal = ({ open, title, subtitle, confirmLabel, submitting, error, onClose, onSubmit }) => {
-  const [form, setForm] = useState({ shippingName: "", shippingIdNumber: "", shippingAddress: "" });
+  const [form, setForm] = useState({ shippingName: "", shippingPhone: "", shippingAddress: "" });
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -64,13 +64,14 @@ const ShippingModal = ({ open, title, subtitle, confirmLabel, submitting, error,
               </div>
 
               <div className="relative">
-                <FiCreditCard className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-navy-300" />
+                <FiPhone className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-navy-300" />
                 <input
                   required
-                  name="shippingIdNumber"
-                  value={form.shippingIdNumber}
+                  type="tel"
+                  name="shippingPhone"
+                  value={form.shippingPhone}
                   onChange={handleChange}
-                  placeholder="ID number"
+                  placeholder="Phone number"
                   className="w-full rounded-xl border border-navy-100 bg-cream-50 py-3.5 pl-11 pr-4 text-sm outline-none focus:border-coral-400"
                 />
               </div>

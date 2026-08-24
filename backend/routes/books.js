@@ -90,12 +90,12 @@ router.post("/:id/borrow", verifyFirebaseToken, async (req, res) => {
     }
 
     const name = (req.body.shippingName || "").trim();
-    const idNumber = (req.body.shippingIdNumber || "").trim();
+    const phone = (req.body.shippingPhone || "").trim();
     const address = (req.body.shippingAddress || "").trim();
-    if (!name || !idNumber || !address) {
+    if (!name || !phone || !address) {
       return res
         .status(400)
-        .json({ message: "Name, ID and home address are required to borrow" });
+        .json({ message: "Name, phone number and home address are required to borrow" });
     }
 
     const alreadyBorrowed = await Borrow.findOne({
@@ -110,7 +110,7 @@ router.post("/:id/borrow", verifyFirebaseToken, async (req, res) => {
     const borrow = await Borrow.create({
       userId: req.user._id,
       bookId: book._id,
-      shipping: { name, idNumber, address },
+      shipping: { name, phone, address },
     });
     book.available = false;
     await book.save();

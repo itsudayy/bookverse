@@ -58,6 +58,26 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // The Store catalogue is public to browse. Prices are only ever read from
+    // here server-side when charging, so a client rewriting one would achieve
+    // nothing even if writes were open — they are not.
+    match /storeBooks/{bookId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // A cart is keyed by the owner's uid.
+    match /carts/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // Orders carry payment details — owner only.
+    match /orders/{orderId} {
+      allow read: if signedIn() && request.auth.uid == resource.data.userUid;
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

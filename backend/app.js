@@ -13,6 +13,9 @@ const pointsRoutes = require("./routes/points");
 const reviewRoutes = require("./routes/reviews");
 const notificationRoutes = require("./routes/notifications");
 const wishlistRoutes = require("./routes/wishlist");
+const storeRoutes = require("./routes/store");
+const cartRoutes = require("./routes/cart");
+const checkoutRoutes = require("./routes/checkout");
 
 const app = express();
 
@@ -30,6 +33,9 @@ app.use("/api/points", pointsRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/store", storeRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/checkout", checkoutRoutes);
 
 app.get("/", (req, res) => {
   res.send("Bookverse API is running");

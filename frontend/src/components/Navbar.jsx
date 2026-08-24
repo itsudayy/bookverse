@@ -17,12 +17,14 @@ import {
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import { useWishlist } from "../context/WishlistContext";
+import { useCart } from "../context/CartContext";
 import NotificationBell from "./NotificationBell";
 
 const links = [
   { to: "/", label: "Home" },
   { to: "/collection", label: "Collection" },
   { to: "/community", label: "Community" },
+  { to: "/store", label: "Store" },
   { to: "/genres", label: "Genres" },
   { to: "/about", label: "About" },
 ];
@@ -46,6 +48,7 @@ const Navbar = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { profile, firebaseUser, points, logout } = useAuth();
   const { items: wishlistItems } = useWishlist();
+  const { cart } = useCart();
   const navigate = useNavigate();
   const closeTimer = useRef(null);
 
@@ -177,7 +180,6 @@ const Navbar = () => {
                 )}
               </Link>
 
-              {/* Cart — placeholder until the Store ships */}
               <Link
                 to="/cart"
                 className={`relative hidden sm:flex ${iconBtn}`}
@@ -185,6 +187,11 @@ const Navbar = () => {
                 title="Cart"
               >
                 <FiShoppingCart size={18} />
+                {cart.count > 0 && (
+                  <span className="absolute right-1 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-coral-500 px-1 text-[10px] font-bold text-white">
+                    {cart.count > 9 ? "9+" : cart.count}
+                  </span>
+                )}
               </Link>
 
               <NotificationBell />

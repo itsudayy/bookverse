@@ -15,6 +15,9 @@ const COLLECTIONS = {
   reviews: "reviews",
   purchases: "purchases",
   wishlist: "wishlist",
+  storeBooks: "storeBooks",
+  carts: "carts",
+  orders: "orders",
 };
 
 // A contributor earns this for each used book they share; an official book

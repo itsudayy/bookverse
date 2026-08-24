@@ -39,4 +39,26 @@ async function getMe(req, res) {
   res.json(req.user);
 }
 
-module.exports = { syncUser, getMe };
+// One-time-per-account self-promotion, gated by a server-only shared secret.
+// This is the ONLY admin endpoint that trusts a secret instead of a role —
+// every subsequent admin action is attributable to this specific signed-in
+// account (audit trail), not "whoever has the secret."
+async function bootstrapAdmin(req, res, next) {
+  try {
+    const providedSecret = req.headers["x-admin-secret"];
+    if (!process.env.ADMIN_SECRET || providedSecret !== process.env.ADMIN_SECRET) {
+      return res.status(403).json({ message: "Invalid admin secret." });
+    }
+
+    if (req.user.role !== "admin") {
+      req.user.role = "admin";
+      await req.user.save();
+    }
+
+    res.json(req.user);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { syncUser, getMe, bootstrapAdmin };

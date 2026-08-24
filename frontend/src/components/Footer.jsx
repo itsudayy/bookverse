@@ -1,7 +1,10 @@
 import { Link } from "react-router-dom";
 import { FiBookOpen, FiInstagram, FiTwitter, FiGithub, FiMail } from "react-icons/fi";
+import { useAuth } from "../context/AuthContext";
 
 const Footer = () => {
+  const { profile } = useAuth();
+
   return (
     <footer className="relative overflow-hidden bg-navy-950 text-cream-100/70">
       <div className="absolute inset-0 bg-grid-fade opacity-40 pointer-events-none" />
@@ -71,11 +74,13 @@ const Footer = () => {
                   Register
                 </Link>
               </li>
-              <li>
-                <Link to="/admin" className="hover:text-coral-400 transition-colors duration-300">
-                  Admin
-                </Link>
-              </li>
+              {profile?.role === "admin" && (
+                <li>
+                  <Link to="/admin" className="hover:text-coral-400 transition-colors duration-300">
+                    Admin
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
         </div>

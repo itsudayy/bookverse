@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import MyLibrary from "./pages/MyLibrary";
 import Admin from "./pages/Admin";
+import AdminSetup from "./pages/AdminSetup";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -39,7 +40,15 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/admin" element={<Admin />} />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <Admin />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/admin/setup" element={<AdminSetup />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AnimatePresence>

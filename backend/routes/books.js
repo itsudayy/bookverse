@@ -1,7 +1,7 @@
 const express = require("express");
 const Book = require("../models/Book");
 const Borrow = require("../models/Borrow");
-const { verifyFirebaseToken } = require("../middleware/auth");
+const { verifyFirebaseToken, requireRole } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -45,8 +45,8 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// POST /api/books
-router.post("/", async (req, res) => {
+// POST /api/books — official collection is the library authority's, admin only
+router.post("/", verifyFirebaseToken, requireRole("admin"), async (req, res) => {
   try {
     const book = await Book.create(req.body);
     res.status(201).json(book);
@@ -55,8 +55,8 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PUT /api/books/:id
-router.put("/:id", async (req, res) => {
+// PUT /api/books/:id — admin only
+router.put("/:id", verifyFirebaseToken, requireRole("admin"), async (req, res) => {
   try {
     const book = await Book.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
@@ -69,8 +69,8 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// DELETE /api/books/:id
-router.delete("/:id", async (req, res) => {
+// DELETE /api/books/:id — admin only
+router.delete("/:id", verifyFirebaseToken, requireRole("admin"), async (req, res) => {
   try {
     const book = await Book.findByIdAndDelete(req.params.id);
     if (!book) return res.status(404).json({ message: "Book not found" });

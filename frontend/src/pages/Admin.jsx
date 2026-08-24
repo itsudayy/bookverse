@@ -11,6 +11,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import api from "../services/api";
+import { booksAdmin } from "../services/adminService";
 import PageTransition from "../components/PageTransition";
 import BookCover from "../components/BookCover";
 
@@ -109,9 +110,9 @@ const Admin = () => {
         rating: Number(form.rating),
       };
       if (editingId) {
-        await api.put(`/books/${editingId}`, payload);
+        await booksAdmin.update(editingId, payload);
       } else {
-        await api.post("/books", payload);
+        await booksAdmin.create(payload);
       }
       setModalOpen(false);
       fetchAll();
@@ -125,7 +126,7 @@ const Admin = () => {
   const handleDelete = async (id) => {
     setDeletingId(id);
     try {
-      await api.delete(`/books/${id}`);
+      await booksAdmin.remove(id);
       fetchAll();
     } catch (err) {
       console.error("Failed to delete book", err);

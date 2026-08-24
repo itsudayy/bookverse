@@ -15,8 +15,8 @@ const Register = () => {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Google sign-in via redirect reloads the page, so route on the restored
-  // session rather than on handleGoogle's return value.
+  // Route off the restored auth state, so an already-signed-in visitor never
+  // sees the register form and a popup sign-in lands somewhere useful.
   useEffect(() => {
     if (!authLoading && firebaseUser) navigate("/", { replace: true });
   }, [authLoading, firebaseUser, navigate]);
@@ -55,10 +55,8 @@ const Register = () => {
     setError("");
     setSubmitting(true);
     try {
-      // null means we fell back to a redirect — the browser is navigating away,
-      // so there's nothing to route to here.
-      const user = await loginWithGoogle();
-      if (user) navigate("/", { replace: true });
+      await loginWithGoogle();
+      navigate("/", { replace: true });
     } catch (err) {
       setError(friendlyAuthError(err));
     } finally {

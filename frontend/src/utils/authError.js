@@ -12,9 +12,15 @@ const MESSAGES = {
   "auth/popup-closed-by-user": "Google sign-in was cancelled.",
   "auth/cancelled-popup-request": "Google sign-in was cancelled.",
   "auth/popup-blocked":
-    "Your browser blocked the sign-in popup. Allow popups for this site, or try again to continue in the same tab.",
+    "Your browser blocked the sign-in popup. Allow popups for this site, then try again.",
   "auth/unauthorized-domain": "This site isn't authorized for Google sign-in yet.",
   "auth/operation-not-allowed": "Google sign-in isn't enabled for this project.",
+  "auth/internal-error":
+    "Google sign-in couldn't complete in this browser. Allow popups for this site and try again, or use your email and password.",
+  "auth/web-storage-unsupported":
+    "This browser blocks the storage Google sign-in needs. Try a different browser, or use your email and password.",
+  "auth/operation-not-supported-in-this-environment":
+    "Google sign-in isn't supported in this browser. Please use your email and password instead.",
   "auth/account-exists-with-different-credential":
     "You already have an account with this email. Log in with your email and password instead.",
 };

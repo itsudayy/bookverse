@@ -4,6 +4,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   getRedirectResult,
   GoogleAuthProvider,
   updateProfile,
@@ -25,9 +26,9 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
-    // Sign-in happens via popup (see loginWithGoogle), so there is normally no
-    // redirect to finish. This only settles a redirect left pending by an older
-    // build, and surfaces its error instead of letting it vanish silently.
+    // Completes a redirect-based Google sign-in when the user lands back here.
+    // onAuthStateChanged picks the session up either way; this call exists so a
+    // failed redirect surfaces in the UI instead of vanishing silently.
     getRedirectResult(auth).catch((err) => {
       console.error("Google redirect sign-in failed", err);
       setRedirectError(err);
@@ -64,17 +65,33 @@ export function AuthProvider({ children }) {
     return cred.user;
   }
 
-  // Popup only, deliberately. signInWithRedirect completes its handshake through
-  // a cross-origin iframe on the Firebase auth domain, and Chrome 115+,
-  // Firefox 109+ and Safari 16.1+ all block that third-party storage — the user
-  // signs in at Google, returns, and is silently not logged in. Falling back to
-  // it therefore strands people on the login page instead of rescuing them, so
-  // a blocked popup is reported as an error the user can act on.
+  // Try the popup first, and fall back to a full-page redirect when the browser
+  // refuses it (popup blockers, embedded webviews, storage partitioning).
+  //
+  // The redirect leg only works because we serve Firebase's auth handler from
+  // our OWN origin: /__/auth/* is reverse-proxied to the Firebase auth domain
+  // (see vercel.json) and VITE_FIREBASE_AUTH_DOMAIN points at this site. Served
+  // cross-origin instead, the handler's storage is third-party — which Chrome
+  // 115+, Firefox 109+ and Safari 16.1+ block, silently dropping the session and
+  // stranding the user back on the login form.
   // See https://firebase.google.com/docs/auth/web/redirect-best-practices
+  const POPUP_ENV_FAILURES = new Set([
+    "auth/popup-blocked",
+    "auth/operation-not-supported-in-this-environment",
+    "auth/web-storage-unsupported",
+    "auth/internal-error",
+  ]);
+
   async function loginWithGoogle() {
     const provider = new GoogleAuthProvider();
-    const cred = await signInWithPopup(auth, provider);
-    return cred.user;
+    try {
+      const cred = await signInWithPopup(auth, provider);
+      return cred.user;
+    } catch (err) {
+      if (!POPUP_ENV_FAILURES.has(err?.code)) throw err;
+      await signInWithRedirect(auth, provider);
+      return null; // page navigates to Google; nothing to return here
+    }
   }
 
   async function logout() {

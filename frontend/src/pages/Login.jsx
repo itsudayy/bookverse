@@ -47,8 +47,11 @@ const Login = () => {
     setError("");
     setSubmitting(true);
     try {
-      await loginWithGoogle();
-      navigate(from, { replace: true });
+      // null means we fell back to a redirect — the browser is navigating away,
+      // so there's nothing to route to here. The effect above handles the
+      // return leg once the restored session lands.
+      const user = await loginWithGoogle();
+      if (user) navigate(from, { replace: true });
     } catch (err) {
       setError(friendlyAuthError(err));
     } finally {

@@ -8,8 +8,12 @@ const router = express.Router();
 // GET /api/books - search, filter, sort
 router.get("/", async (req, res) => {
   try {
-    const { search, author, category, sort } = req.query;
-    const query = {};
+    const { search, author, category, sort, includePurchased } = req.query;
+
+    // A purchased copy belongs to its buyer and is no longer part of the
+    // library's collection. Admin passes includePurchased so sold titles don't
+    // silently vanish from the management table.
+    const query = includePurchased === "true" ? {} : { purchased: { $ne: true } };
 
     if (search) {
       query.title = { $regex: search, $options: "i" };
@@ -85,6 +89,11 @@ router.post("/:id/borrow", verifyFirebaseToken, async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
     if (!book) return res.status(404).json({ message: "Book not found" });
+    if (book.purchased) {
+      return res
+        .status(400)
+        .json({ message: "This copy has been purchased and is no longer available to borrow" });
+    }
     if (!book.available) {
       return res.status(400).json({ message: "This book is currently unavailable" });
     }

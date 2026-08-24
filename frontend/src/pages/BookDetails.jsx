@@ -17,7 +17,7 @@ const BookDetails = () => {
   const navigate = useNavigate();
   // Points come from context so the navbar badge and this page's buy button
   // always agree, and a purchase here updates the balance everywhere.
-  const { firebaseUser, points, refreshPoints } = useAuth();
+  const { firebaseUser, profile, points, refreshPoints } = useAuth();
 
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -98,6 +98,8 @@ const BookDetails = () => {
     );
   }
 
+  const ownedByMe = Boolean(book.purchased && profile && book.purchasedBy === profile.firebaseUid);
+
   return (
     <PageTransition>
       <section className="container-app py-16">
@@ -130,9 +132,16 @@ const BookDetails = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <span className="inline-block rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-600">
-              {book.category}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-600">
+                {book.category}
+              </span>
+              {book.purchased && (
+                <span className="rounded-full bg-navy-900 px-3 py-1 text-xs font-bold uppercase tracking-wide text-cream-50">
+                  {ownedByMe ? "You own this" : "Sold"}
+                </span>
+              )}
+            </div>
             <h1 className="font-display mt-4 text-4xl leading-tight text-navy-900 sm:text-5xl">
               {book.title}
             </h1>
@@ -152,9 +161,15 @@ const BookDetails = () => {
                 { icon: FiFileText, label: "Pages", value: book.pages },
                 { icon: FiBookOpen, label: "Genre", value: book.category },
                 {
-                  icon: book.available ? FiCheckCircle : FiLock,
+                  icon: book.purchased ? FiAward : book.available ? FiCheckCircle : FiLock,
                   label: "Status",
-                  value: book.available ? "Available" : "Borrowed",
+                  value: book.purchased
+                    ? ownedByMe
+                      ? "Owned"
+                      : "Sold"
+                    : book.available
+                    ? "Available"
+                    : "Borrowed",
                 },
               ].map((stat) => (
                 <div
@@ -183,31 +198,47 @@ const BookDetails = () => {
             )}
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              {book.available ? (
-                <button
-                  onClick={() => openIntent("borrow")}
-                  className="rounded-full bg-gradient-to-r from-coral-500 to-coral-400 px-8 py-4 text-sm font-bold text-white shadow-coral transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-                >
-                  Borrow Book
-                </button>
+              {book.purchased ? (
+                <p className="rounded-xl border border-dashed border-navy-200 px-5 py-4 text-sm text-navy-500">
+                  {ownedByMe
+                    ? "You own this copy permanently — it's yours to keep."
+                    : "This copy has been purchased by another reader and has left the library."}
+                </p>
               ) : (
-                <button
-                  disabled
-                  className="cursor-not-allowed rounded-full bg-navy-200 px-8 py-4 text-sm font-bold text-navy-500"
-                >
-                  Currently Borrowed
-                </button>
-              )}
+                <>
+                  {book.available ? (
+                    <button
+                      onClick={() => openIntent("borrow")}
+                      className="rounded-full bg-gradient-to-r from-coral-500 to-coral-400 px-8 py-4 text-sm font-bold text-white shadow-coral transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                    >
+                      Borrow Book
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="cursor-not-allowed rounded-full bg-navy-200 px-8 py-4 text-sm font-bold text-navy-500"
+                    >
+                      Currently Borrowed
+                    </button>
+                  )}
 
-              {/* Buying is independent of availability — a purchased copy is
-                  posted to the reader rather than lent from the shelf. */}
-              <button
-                onClick={() => openIntent("purchase")}
-                className="flex items-center gap-2 rounded-full border-2 border-indigo-600 px-8 py-4 text-sm font-bold text-indigo-600 transition-all duration-300 hover:-translate-y-1 hover:bg-indigo-600 hover:text-white"
-              >
-                <FiAward />
-                Buy with {points?.pointsToPurchase ?? 200} points
-              </button>
+                  {/* The library owns a single copy, so it can't be sold out
+                      from under whoever is currently reading it. */}
+                  <button
+                    onClick={() => openIntent("purchase")}
+                    disabled={!book.available}
+                    title={
+                      book.available
+                        ? undefined
+                        : "On loan at the moment — it can be bought once it's returned"
+                    }
+                    className="flex items-center gap-2 rounded-full border-2 border-indigo-600 px-8 py-4 text-sm font-bold text-indigo-600 transition-all duration-300 hover:-translate-y-1 hover:bg-indigo-600 hover:text-white disabled:cursor-not-allowed disabled:border-navy-200 disabled:text-navy-400 disabled:hover:translate-y-0 disabled:hover:bg-transparent"
+                  >
+                    <FiAward />
+                    Buy with {points?.pointsToPurchase ?? 200} points
+                  </button>
+                </>
+              )}
 
               <WishlistButton
                 book={{
@@ -220,7 +251,14 @@ const BookDetails = () => {
               />
             </div>
 
-            {firebaseUser ? (
+            {!book.purchased && !book.available && (
+              <p className="mt-3 text-xs text-navy-400">
+                This book is on loan right now. It can be borrowed or bought once it's
+                returned.
+              </p>
+            )}
+
+            {book.purchased ? null : firebaseUser ? (
               <p className="mt-3 text-xs text-navy-400">
                 You have{" "}
                 <span className="font-bold text-indigo-600">{points?.points ?? 0} points</span>.

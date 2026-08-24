@@ -54,7 +54,9 @@ const Admin = () => {
     try {
       const [statsRes, booksRes] = await Promise.all([
         api.get("/stats"),
-        api.get("/books", { params: { sort: "newest" } }),
+        // Admin sees sold copies too, so a purchased book doesn't just vanish
+        // from the management table.
+        api.get("/books", { params: { sort: "newest", includePurchased: "true" } }),
       ]);
       setStats(statsRes.data);
       setBooks(booksRes.data);
@@ -219,12 +221,14 @@ const Admin = () => {
                       <td className="px-5 py-3">
                         <span
                           className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                            book.available
+                            book.purchased
+                              ? "bg-indigo-100 text-indigo-700"
+                              : book.available
                               ? "bg-emerald-50 text-emerald-600"
                               : "bg-navy-100 text-navy-500"
                           }`}
                         >
-                          {book.available ? "Available" : "Borrowed"}
+                          {book.purchased ? "Sold" : book.available ? "Available" : "Borrowed"}
                         </span>
                       </td>
                       <td className="px-5 py-3">

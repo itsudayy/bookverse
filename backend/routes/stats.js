@@ -6,12 +6,17 @@ const router = express.Router();
 // GET /api/stats
 router.get("/", async (req, res) => {
   try {
-    const totalBooks = await Book.countDocuments();
-    const availableBooks = await Book.countDocuments({ available: true });
-    const borrowedBooks = totalBooks - availableBooks;
-    const categories = (await Book.distinct("category")).length;
+    // Purchased copies have left the library, so they're counted separately
+    // rather than inflating the collection totals.
+    const inCollection = { purchased: { $ne: true } };
 
-    res.json({ totalBooks, availableBooks, borrowedBooks, categories });
+    const totalBooks = await Book.countDocuments(inCollection);
+    const availableBooks = await Book.countDocuments({ ...inCollection, available: true });
+    const borrowedBooks = totalBooks - availableBooks;
+    const purchasedBooks = await Book.countDocuments({ purchased: true });
+    const categories = (await Book.distinct("category", inCollection)).length;
+
+    res.json({ totalBooks, availableBooks, borrowedBooks, purchasedBooks, categories });
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch stats", error: err.message });
   }

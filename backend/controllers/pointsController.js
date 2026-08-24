@@ -1,5 +1,6 @@
 const admin = require("../lib/firebaseAdmin");
 const Book = require("../models/Book");
+const Borrow = require("../models/Borrow");
 const {
   db,
   COLLECTIONS,
@@ -8,6 +9,14 @@ const {
 } = require("../lib/firestore");
 
 const { FieldValue } = admin.firestore;
+
+// Undoes the claim made before spending points, so a failed payment doesn't
+// strand a book as sold-but-never-paid-for.
+async function releaseClaim(bookId) {
+  await Book.findByIdAndUpdate(bookId, {
+    $set: { purchased: false, available: true, purchasedBy: null, purchasedAt: null },
+  });
+}
 
 // GET /api/points/me — balance plus the economy's rates, so the UI never has
 // to hard-code numbers that the server is the authority on.
@@ -56,48 +65,92 @@ async function purchaseOfficialBook(req, res, next) {
     const book = await Book.findById(req.params.bookId);
     if (!book) return res.status(404).json({ message: "Book not found" });
 
+    if (book.purchased) {
+      return res.status(400).json({
+        message:
+          book.purchasedBy === req.user.firebaseUid
+            ? "You already own this book."
+            : "This copy has already been purchased by another reader.",
+      });
+    }
+    // The library lends one copy; it can't be posted to a buyer while someone
+    // else is reading it.
+    if (!book.available) {
+      const mine = await Borrow.findOne({
+        bookId: book._id,
+        userId: req.user._id,
+        status: "borrowed",
+      });
+      return res.status(400).json({
+        message: mine
+          ? "You're currently borrowing this book. Return it first, then you can buy it."
+          : "This book is currently borrowed by another reader, so it can't be purchased yet.",
+      });
+    }
+
+    // MongoDB holds the book and Firestore holds the points, so there is no
+    // single transaction spanning both. Claim the copy first with one atomic
+    // conditional update — whoever wins this update owns the sale — then spend
+    // the points, and release the claim if that fails.
+    const claimed = await Book.findOneAndUpdate(
+      // $ne: true rather than false — books seeded before this field existed
+      // have no `purchased` key at all, and an equality match skips those.
+      { _id: book._id, available: true, purchased: { $ne: true } },
+      {
+        $set: {
+          purchased: true,
+          available: false,
+          purchasedBy: req.user.firebaseUid,
+          purchasedAt: new Date(),
+        },
+      },
+      { new: true }
+    );
+    if (!claimed) {
+      return res.status(400).json({
+        message: "This book was just taken by someone else. Please refresh and try again.",
+      });
+    }
+
     const userRef = db.collection(COLLECTIONS.users).doc(req.user.firebaseUid);
 
-    // A transaction so two concurrent purchases can't both spend the same
-    // points — the balance is re-read and checked inside the transaction.
-    const result = await db.runTransaction(async (tx) => {
-      const userDoc = await tx.get(userRef);
-      const balance = userDoc.exists ? userDoc.data().points || 0 : 0;
-      if (balance < POINTS_TO_PURCHASE) {
-        return { ok: false, balance };
-      }
+    let result;
+    try {
+      // A transaction so two concurrent purchases can't both spend the same
+      // points — the balance is re-read and checked inside the transaction.
+      result = await db.runTransaction(async (tx) => {
+        const userDoc = await tx.get(userRef);
+        const balance = userDoc.exists ? userDoc.data().points || 0 : 0;
+        if (balance < POINTS_TO_PURCHASE) {
+          return { ok: false, balance };
+        }
 
-      const already = await tx.get(
-        db
-          .collection(COLLECTIONS.purchases)
-          .where("userUid", "==", req.user.firebaseUid)
-          .where("bookId", "==", req.params.bookId)
-      );
-      if (!already.empty) return { ok: false, duplicate: true, balance };
-
-      tx.set(
-        userRef,
-        { points: FieldValue.increment(-POINTS_TO_PURCHASE) },
-        { merge: true }
-      );
-      tx.set(db.collection(COLLECTIONS.purchases).doc(), {
-        userUid: req.user.firebaseUid,
-        userName: req.user.name,
-        bookId: req.params.bookId,
-        bookTitle: book.title,
-        bookAuthor: book.author,
-        bookCover: book.coverImage,
-        pointsSpent: POINTS_TO_PURCHASE,
-        shipping: { name, phone, address },
-        createdAt: FieldValue.serverTimestamp(),
+        tx.set(
+          userRef,
+          { points: FieldValue.increment(-POINTS_TO_PURCHASE) },
+          { merge: true }
+        );
+        tx.set(db.collection(COLLECTIONS.purchases).doc(), {
+          userUid: req.user.firebaseUid,
+          userName: req.user.name,
+          bookId: req.params.bookId,
+          bookTitle: book.title,
+          bookAuthor: book.author,
+          bookCover: book.coverImage,
+          pointsSpent: POINTS_TO_PURCHASE,
+          shipping: { name, phone, address },
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        return { ok: true, balance: balance - POINTS_TO_PURCHASE };
       });
-      return { ok: true, balance: balance - POINTS_TO_PURCHASE };
-    });
+    } catch (err) {
+      await releaseClaim(book._id);
+      throw err;
+    }
 
     if (!result.ok) {
-      if (result.duplicate) {
-        return res.status(400).json({ message: "You already own this book" });
-      }
+      // Payment didn't go through, so put the copy back on the shelf.
+      await releaseClaim(book._id);
       return res.status(400).json({
         message: `Not enough points. This book costs ${POINTS_TO_PURCHASE}, you have ${result.balance}.`,
       });

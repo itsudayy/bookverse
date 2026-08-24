@@ -8,6 +8,7 @@ import PageTransition from "../components/PageTransition";
 import BookCover from "../components/BookCover";
 import ShippingModal from "../components/ShippingModal";
 import ReviewSection from "../components/ReviewSection";
+import WishlistButton from "../components/WishlistButton";
 
 const CommunityBookDetails = () => {
   const { id } = useParams();
@@ -167,26 +168,38 @@ const CommunityBookDetails = () => {
             )}
 
             <div className="mt-8">
-              {isOwner ? (
-                <p className="rounded-xl border border-dashed border-navy-200 px-5 py-4 text-sm text-navy-500">
-                  This is your contribution. You'll be notified when someone asks to
-                  borrow it.
-                </p>
-              ) : book.available ? (
-                <button
-                  onClick={openRequest}
-                  className="flex items-center gap-2 rounded-full bg-gradient-to-r from-coral-500 to-coral-400 px-8 py-4 text-sm font-bold text-white shadow-coral transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-                >
-                  <FiPackage /> Request to borrow
-                </button>
-              ) : (
-                <button
-                  disabled
-                  className="cursor-not-allowed rounded-full bg-navy-200 px-8 py-4 text-sm font-bold text-navy-500"
-                >
-                  Currently on loan
-                </button>
-              )}
+              <div className="flex flex-wrap items-center gap-3">
+                {isOwner ? (
+                  <p className="rounded-xl border border-dashed border-navy-200 px-5 py-4 text-sm text-navy-500">
+                    This is your contribution. You'll be notified when someone asks to
+                    borrow it.
+                  </p>
+                ) : book.available ? (
+                  <button
+                    onClick={openRequest}
+                    className="flex items-center gap-2 rounded-full bg-gradient-to-r from-coral-500 to-coral-400 px-8 py-4 text-sm font-bold text-white shadow-coral transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <FiPackage /> Request to borrow
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="cursor-not-allowed rounded-full bg-navy-200 px-8 py-4 text-sm font-bold text-navy-500"
+                  >
+                    Currently on loan
+                  </button>
+                )}
+
+                <WishlistButton
+                  book={{
+                    source: "community",
+                    bookId: id,
+                    title: book.title,
+                    author: book.author,
+                    coverImage: book.coverImage,
+                  }}
+                />
+              </div>
 
               <p className="mt-3 text-xs text-navy-400">
                 Community books are borrow-only — they can't be purchased with points.

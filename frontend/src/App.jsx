@@ -16,6 +16,11 @@ import Register from "./pages/Register";
 import MyLibrary from "./pages/MyLibrary";
 import Admin from "./pages/Admin";
 import AdminSetup from "./pages/AdminSetup";
+import AccountInfo from "./pages/AccountInfo";
+import MyReviews from "./pages/MyReviews";
+import Wishlist from "./pages/Wishlist";
+import Orders from "./pages/Orders";
+import Cart from "./pages/Cart";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -41,6 +46,46 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MyLibrary />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/account"
+              element={
+                <ProtectedRoute>
+                  <AccountInfo />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/account/reviews"
+              element={
+                <ProtectedRoute>
+                  <MyReviews />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/wishlist"
+              element={
+                <ProtectedRoute>
+                  <Wishlist />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute>
+                  <Orders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cart"
+              element={
+                <ProtectedRoute>
+                  <Cart />
                 </ProtectedRoute>
               }
             />

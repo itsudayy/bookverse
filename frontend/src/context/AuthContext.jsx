@@ -18,8 +18,22 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [points, setPoints] = useState(null);
   const [loading, setLoading] = useState(true);
   const [redirectError, setRedirectError] = useState(null);
+
+  // Points live here rather than in each page, so the navbar badge, the book
+  // page's buy button and My Library never disagree after a purchase or a
+  // contribution. Any flow that changes the balance calls refreshPoints().
+  async function refreshPoints() {
+    if (!auth?.currentUser) return;
+    try {
+      const { data } = await api.get("/points/me");
+      setPoints(data);
+    } catch (err) {
+      console.error("Failed to load points", err);
+    }
+  }
 
   useEffect(() => {
     if (!auth) {
@@ -40,12 +54,14 @@ export function AuthProvider({ children }) {
         try {
           const { data } = await api.post("/auth/sync", { name: fbUser.displayName });
           setProfile(data);
+          refreshPoints();
         } catch (err) {
           console.error("Failed to sync user profile", err);
           setProfile(null);
         }
       } else {
         setProfile(null);
+        setPoints(null);
       }
       setLoading(false);
     });
@@ -109,6 +125,7 @@ export function AuthProvider({ children }) {
       value={{
         firebaseUser,
         profile,
+        points,
         loading,
         redirectError,
         signup,
@@ -116,6 +133,7 @@ export function AuthProvider({ children }) {
         loginWithGoogle,
         logout,
         refreshProfile,
+        refreshPoints,
       }}
     >
       {children}

@@ -35,7 +35,7 @@ const TABS = [
 ];
 
 const MyLibrary = () => {
-  const { profile } = useAuth();
+  const { profile, refreshPoints } = useAuth();
   const [tab, setTab] = useState("borrowed");
 
   const [records, setRecords] = useState([]);
@@ -65,6 +65,8 @@ const MyLibrary = () => {
       setRequests(reqs);
       setPoints(pts);
       setPurchases(purch);
+      // Keep the navbar's points badge in step with this page.
+      refreshPoints();
     } catch (err) {
       console.error("Failed to load your library", err);
     } finally {

@@ -14,6 +14,7 @@ const COLLECTIONS = {
   notifications: "notifications",
   reviews: "reviews",
   purchases: "purchases",
+  wishlist: "wishlist",
 };
 
 // A contributor earns this for each used book they share; an official book

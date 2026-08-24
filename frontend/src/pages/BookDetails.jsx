@@ -4,17 +4,20 @@ import { motion } from "framer-motion";
 import { FiArrowLeft, FiBookOpen, FiCalendar, FiFileText, FiCheckCircle, FiLock, FiAward } from "react-icons/fi";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import { fetchMyPoints, purchaseBook } from "../services/pointsService";
+import { purchaseBook } from "../services/pointsService";
 import PageTransition from "../components/PageTransition";
 import BookCover from "../components/BookCover";
 import RatingStars from "../components/RatingStars";
 import ShippingModal from "../components/ShippingModal";
 import ReviewSection from "../components/ReviewSection";
+import WishlistButton from "../components/WishlistButton";
 
 const BookDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { firebaseUser } = useAuth();
+  // Points come from context so the navbar badge and this page's buy button
+  // always agree, and a purchase here updates the balance everywhere.
+  const { firebaseUser, points, refreshPoints } = useAuth();
 
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +27,6 @@ const BookDetails = () => {
   const [intent, setIntent] = useState(null); // "borrow" | "purchase"
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState("");
-  const [points, setPoints] = useState(null);
 
   const fetchBook = async () => {
     try {
@@ -37,25 +39,11 @@ const BookDetails = () => {
     }
   };
 
-  const loadPoints = async () => {
-    if (!firebaseUser) return;
-    try {
-      setPoints(await fetchMyPoints());
-    } catch (err) {
-      console.error("Failed to load points", err);
-    }
-  };
-
   useEffect(() => {
     fetchBook();
     window.scrollTo(0, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  useEffect(() => {
-    loadPoints();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firebaseUser]);
 
   const openIntent = (which) => {
     if (!firebaseUser) {
@@ -83,7 +71,7 @@ const BookDetails = () => {
       }
       setIntent(null);
       fetchBook();
-      loadPoints();
+      refreshPoints();
     } catch (err) {
       setModalError(err.response?.data?.message || "Something went wrong.");
     } finally {
@@ -220,6 +208,16 @@ const BookDetails = () => {
                 <FiAward />
                 Buy with {points?.pointsToPurchase ?? 200} points
               </button>
+
+              <WishlistButton
+                book={{
+                  source: "official",
+                  bookId: id,
+                  title: book.title,
+                  author: book.author,
+                  coverImage: book.coverImage,
+                }}
+              />
             </div>
 
             {firebaseUser ? (

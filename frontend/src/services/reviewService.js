@@ -9,3 +9,8 @@ export async function addReview(source, bookId, payload) {
   const { data } = await api.post(`/reviews/${source}/${bookId}`, payload);
   return data;
 }
+
+export async function fetchMyReviews() {
+  const { data } = await api.get("/reviews/mine");
+  return data;
+}

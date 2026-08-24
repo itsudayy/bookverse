@@ -1,4 +1,5 @@
 const admin = require("../lib/firebaseAdmin");
+const Book = require("../models/Book");
 const { db, COLLECTIONS } = require("../lib/firestore");
 
 const { FieldValue } = admin.firestore;
@@ -78,4 +79,53 @@ async function addReview(req, res, next) {
   }
 }
 
-module.exports = { listReviews, addReview };
+// GET /api/reviews/mine — every review this user has written, across both
+// shelves, enriched with each book's title and cover so the account page can
+// render them without the client having to resolve two different id spaces.
+async function listMyReviews(req, res, next) {
+  try {
+    const snap = await db
+      .collection(COLLECTIONS.reviews)
+      .where("userUid", "==", req.user.firebaseUid)
+      .get();
+
+    const reviews = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+
+    // Resolve official books from Mongo and community books from Firestore in
+    // batch, so N reviews don't fan out into N round-trips per store.
+    const officialIds = [...new Set(reviews.filter((r) => r.source === "official").map((r) => r.bookId))];
+    const communityIds = [...new Set(reviews.filter((r) => r.source === "community").map((r) => r.bookId))];
+
+    const officialBooks = officialIds.length
+      ? await Book.find({ _id: { $in: officialIds } }).select("title coverImage author")
+      : [];
+    const officialMap = Object.fromEntries(officialBooks.map((b) => [String(b._id), b]));
+
+    const communityMap = {};
+    await Promise.all(
+      communityIds.map(async (id) => {
+        const doc = await db.collection(COLLECTIONS.usedBooks).doc(id).get();
+        if (doc.exists) communityMap[id] = doc.data();
+      })
+    );
+
+    const enriched = reviews.map((r) => {
+      const book = r.source === "official" ? officialMap[r.bookId] : communityMap[r.bookId];
+      return {
+        ...r,
+        bookTitle: book?.title || "Unknown book",
+        bookAuthor: book?.author || "",
+        bookCover: book?.coverImage || "",
+        bookExists: Boolean(book),
+      };
+    });
+
+    res.json(enriched);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listReviews, addReview, listMyReviews };

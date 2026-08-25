@@ -16,3 +16,14 @@ export const booksAdmin = {
   update: async (id, payload) => (await api.put(`/books/${id}`, payload)).data,
   remove: async (id) => (await api.delete(`/books/${id}`)).data,
 };
+
+export const storeBooksAdmin = {
+  create: async (payload) => (await api.post("/store/books", payload)).data,
+  update: async (id, payload) => (await api.put(`/store/books/${id}`, payload)).data,
+  remove: async (id) => (await api.delete(`/store/books/${id}`)).data,
+};
+
+export async function fetchMembers() {
+  const { data } = await api.get("/admin/members");
+  return data;
+}

@@ -22,8 +22,8 @@ import NotificationBell from "./NotificationBell";
 
 const links = [
   { to: "/", label: "Home" },
-  { to: "/collection", label: "Collection" },
-  { to: "/community", label: "Community" },
+  { to: "/collection", label: "Library Collection" },
+  { to: "/community", label: "Community Store" },
   { to: "/store", label: "Store" },
   { to: "/genres", label: "Genres" },
   { to: "/about", label: "About" },

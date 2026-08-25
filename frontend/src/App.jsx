@@ -11,7 +11,6 @@ import Community from "./pages/Community";
 import CommunityBookDetails from "./pages/CommunityBookDetails";
 import Store from "./pages/Store";
 import StoreBookDetails from "./pages/StoreBookDetails";
-import CheckoutSuccess from "./pages/CheckoutSuccess";
 import Genres from "./pages/Genres";
 import About from "./pages/About";
 import Login from "./pages/Login";
@@ -91,14 +90,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Cart />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/checkout/success"
-              element={
-                <ProtectedRoute>
-                  <CheckoutSuccess />
                 </ProtectedRoute>
               }
             />

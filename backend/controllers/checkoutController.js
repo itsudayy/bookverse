@@ -44,7 +44,10 @@ async function createCheckoutSession(req, res, next) {
         userUid: req.user.firebaseUid,
         itemCount: String(cart.count),
       },
-      success_url: `${CLIENT_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      // Both outcomes return to the cart, which confirms the payment and
+      // switches itself into a receipt rather than bouncing through a
+      // separate page.
+      success_url: `${CLIENT_URL}/cart?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${CLIENT_URL}/cart?canceled=1`,
     });
 

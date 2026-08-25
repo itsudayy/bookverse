@@ -1,19 +1,52 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiShoppingCart, FiArrowRight, FiTrash2, FiMinus, FiPlus, FiLock } from "react-icons/fi";
+import {
+  FiShoppingCart,
+  FiArrowRight,
+  FiTrash2,
+  FiMinus,
+  FiPlus,
+  FiLock,
+  FiCheckCircle,
+  FiPackage,
+} from "react-icons/fi";
 import { useCart } from "../context/CartContext";
-import { startCheckout } from "../services/cartService";
+import { startCheckout, confirmCheckout } from "../services/cartService";
 import PageTransition from "../components/PageTransition";
 import BookCover from "../components/BookCover";
 import { taka } from "../utils/currency";
 
 const Cart = () => {
-  const { cart, loading, setQuantity, remove, clear } = useCart();
-  const [searchParams] = useSearchParams();
+  const { cart, loading, setQuantity, remove, clear, reload } = useCart();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [busyId, setBusyId] = useState(null);
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState("");
+
+  // Stripe sends the shopper back here after paying.
+  const sessionId = searchParams.get("session_id");
+  const [order, setOrder] = useState(null);
+  const [confirming, setConfirming] = useState(Boolean(sessionId));
+  const confirmed = useRef(false);
+
+  useEffect(() => {
+    if (!sessionId || confirmed.current) return;
+    confirmed.current = true;
+
+    confirmCheckout(sessionId)
+      .then((o) => {
+        setOrder(o);
+        reload(); // the server emptied the cart — mirror that here
+        // Drop the id from the URL so a refresh doesn't re-run confirmation.
+        setSearchParams({}, { replace: true });
+      })
+      .catch((err) =>
+        setError(err.response?.data?.message || "We couldn't confirm that payment.")
+      )
+      .finally(() => setConfirming(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   const canceled = searchParams.get("canceled") === "1";
 
@@ -58,6 +91,73 @@ const Cart = () => {
       </section>
 
       <section className="container-app py-14">
+        {confirming && (
+          <div className="mb-8 flex items-center gap-3 rounded-2xl border border-navy-100 bg-white px-6 py-5 shadow-sm">
+            <div className="h-6 w-6 animate-spin rounded-full border-[3px] border-navy-200 border-t-coral-500" />
+            <p className="text-sm font-semibold text-navy-600">Confirming your payment...</p>
+          </div>
+        )}
+
+        {/* Paid — the cart turns into a receipt. */}
+        <AnimatePresence>
+          {order && (
+            <motion.div
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-10 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/60 shadow-sm"
+            >
+              <div className="flex flex-wrap items-center gap-4 px-6 py-6 sm:px-8">
+                <motion.span
+                  initial={{ scale: 0.6, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white"
+                >
+                  <FiCheckCircle size={28} />
+                </motion.span>
+                <div className="min-w-[220px] flex-1">
+                  <h2 className="font-display text-2xl text-navy-900">Payment successful</h2>
+                  <p className="mt-1 text-sm text-navy-600">
+                    Thank you! Your order is confirmed and on its way.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-navy-400">
+                    Paid
+                  </p>
+                  <p className="font-display text-3xl text-navy-900">{taka(order.total)}</p>
+                </div>
+              </div>
+
+              <div className="divide-y divide-emerald-200/60 border-t border-emerald-200/60 px-6 sm:px-8">
+                {(order.items || []).map((it, idx) => (
+                  <div key={idx} className="flex items-center justify-between py-3 text-sm">
+                    <span className="text-navy-700">
+                      {it.title} <span className="text-navy-400">× {it.quantity}</span>
+                    </span>
+                    <span className="font-semibold text-navy-800">{taka(it.lineTotal)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-3 border-t border-emerald-200/60 px-6 py-5 sm:px-8">
+                <Link
+                  to="/store"
+                  className="flex items-center gap-2 rounded-full bg-gradient-to-r from-coral-500 to-coral-400 px-6 py-3 text-sm font-bold text-white shadow-coral transition-transform hover:-translate-y-0.5"
+                >
+                  Continue to Store for more shopping <FiArrowRight />
+                </Link>
+                <Link
+                  to="/orders"
+                  className="flex items-center gap-2 rounded-full border-2 border-navy-200 px-6 py-3 text-sm font-bold text-navy-700 transition-colors hover:border-coral-400 hover:text-coral-600"
+                >
+                  <FiPackage /> View my orders
+                </Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {canceled && (
           <p className="mb-6 rounded-xl bg-cream-100 px-5 py-3 text-sm font-semibold text-navy-600">
             Payment was cancelled — your cart is still here whenever you're ready.
@@ -69,7 +169,9 @@ const Cart = () => {
           </p>
         )}
 
-        {loading ? (
+        {/* While confirming, or once the receipt is showing an emptied cart,
+            the "your cart is empty" panel would just be noise. */}
+        {confirming || (order && cart.items.length === 0) ? null : loading ? (
           <div className="space-y-4">
             {Array.from({ length: 2 }).map((_, i) => (
               <div key={i} className="h-32 animate-pulse rounded-2xl bg-navy-100/50" />

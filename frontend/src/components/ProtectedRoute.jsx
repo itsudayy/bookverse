@@ -14,7 +14,10 @@ const ProtectedRoute = ({ children, roles }) => {
   }
 
   if (!firebaseUser) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    // Keep the query string, not just the path — returning from Stripe carries
+    // ?session_id=..., and dropping it would lose the order confirmation.
+    const from = `${location.pathname}${location.search}`;
+    return <Navigate to="/login" state={{ from }} replace />;
   }
 
   // Wait for the profile before judging role — otherwise the first render after

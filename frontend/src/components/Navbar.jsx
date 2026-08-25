@@ -14,6 +14,7 @@ import {
   FiShoppingCart,
   FiChevronDown,
   FiAward,
+  FiShield,
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import { useWishlist } from "../context/WishlistContext";
@@ -30,8 +31,7 @@ const links = [
 ];
 
 // The account dropdown. Some land on real pages (Wishlist, Rating & Reviews,
-// My Library, Account Info); Orders & Tracking is a placeholder for the Store
-// that's coming later.
+// My Library, Account Info, Orders & Tracking).
 const accountLinks = [
   { to: "/account", label: "Account Info", icon: FiUser },
   { to: "/orders", label: "Orders & Tracking", icon: FiPackage },
@@ -39,6 +39,11 @@ const accountLinks = [
   { to: "/wishlist", label: "Wishlist", icon: FiHeart },
   { to: "/my-library", label: "My Library", icon: FiBookOpen },
 ];
+
+// Only appended for admins, so a plain member never sees a menu item that
+// 403s. This is the sole discoverable entry point to /admin now — the old
+// footer link, buried at the bottom of the page, is gone.
+const ADMIN_LINK = { to: "/admin", label: "Admin Dashboard", icon: FiShield };
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -234,14 +239,25 @@ const Navbar = () => {
                             <FiAward size={12} /> {points?.points ?? 0} points
                           </p>
                         </div>
-                        {accountLinks.map((item) => (
+                        {(profile?.role === "admin"
+                          ? [...accountLinks, ADMIN_LINK]
+                          : accountLinks
+                        ).map((item) => (
                           <Link
                             key={item.to}
                             to={item.to}
                             onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-navy-700 transition-colors hover:bg-cream-100"
+                            className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-cream-100 ${
+                              item === ADMIN_LINK
+                                ? "border-t border-navy-100 text-indigo-700"
+                                : "text-navy-700"
+                            }`}
                           >
-                            <item.icon size={15} className="text-navy-400" /> {item.label}
+                            <item.icon
+                              size={15}
+                              className={item === ADMIN_LINK ? "text-indigo-500" : "text-navy-400"}
+                            />{" "}
+                            {item.label}
                           </Link>
                         ))}
                         <button
@@ -314,7 +330,10 @@ const Navbar = () => {
                   <div className="mb-1 flex items-center gap-2 px-4 py-2 text-sm font-bold text-amber-400">
                     <FiAward size={15} /> {points?.points ?? 0} points
                   </div>
-                  {accountLinks.map((item) => (
+                  {(profile?.role === "admin"
+                    ? [...accountLinks, ADMIN_LINK]
+                    : accountLinks
+                  ).map((item) => (
                     <NavLink
                       key={item.to}
                       to={item.to}
